@@ -1,0 +1,226 @@
+const int trigPin1 = A1; // Sensor kanan
+const int echoPin1 = A0;
+
+const int trigPin2 = A3; // Sensor depan
+const int echoPin2 = A2;
+
+const int trigPin3 = A5; // Sensor kiri
+const int echoPin3 = A4;
+
+// Pin untuk driver motor
+int in1 = 4; // Motor A
+int in2 = 5; // Motor B
+int enA = 45; // PWM untuk Motor A
+int enB = 44; // PWM untuk Motor B
+
+// Motor tambahan
+int in3 = 6; // Motor C
+int in4 = 7; // Motor D
+
+// Pin untuk optocoupler
+const int optoPin1 = 9;  // Optocoupler untuk Motor A
+const int optoPin2 = 10; // Optocoupler untuk Motor B
+
+int api = A7;
+int threshold = 600;
+
+#define PWM 170 // Kecepatan PWM
+#define dis 14
+
+void setup() {
+    Serial.begin(9600);
+    // Inisialisasi pin
+    pinMode(trigPin1, OUTPUT);
+    pinMode(echoPin1, INPUT);
+
+    pinMode(trigPin2, OUTPUT);
+    pinMode(echoPin2, INPUT);
+
+    pinMode(trigPin3, OUTPUT);
+    pinMode(echoPin3, INPUT);
+
+    pinMode(in1, OUTPUT);
+    pinMode(in2, OUTPUT);
+    pinMode(enA, OUTPUT);
+    pinMode(enB, OUTPUT);
+    
+    pinMode(in3, OUTPUT);
+    pinMode(in4, OUTPUT);
+
+    pinMode(optoPin1, OUTPUT);
+    pinMode(optoPin2, OUTPUT);
+
+    pinMode(8, OUTPUT); // Kipas
+    digitalWrite(8, LOW); // Matikan kipas
+}
+
+void loop() {
+    long depan = getDistance(trigPin2, echoPin2); // Sensor depan
+    long kanan = getDistance(trigPin1, echoPin1); // Sensor kanan
+    long kiri = getDistance(trigPin3, echoPin3);  // Sensor kiri
+
+    Serial.print("Depan: "); Serial.print(depan);
+    Serial.print(" Kanan: "); Serial.print(kanan);
+    Serial.print(" Kiri: "); Serial.println(kiri);
+
+     // Baca sensor api
+  int api_terdeteksi = analogRead(api);
+
+  // Deteksi api
+  if (api_terdeteksi > threshold) {
+    digitalWrite(8, HIGH);  // Aktifkan kipas untuk memadamkan api
+    berhenti();
+    delay(5000);
+    return;
+  } else {
+    digitalWrite(8, LOW);  // Matikan kipas jika tidak ada api
+  }
+    if (depan > dis && kanan > dis && kiri > dis) {
+        maju();
+        // delay(2000);
+        // belokKiri();
+        // delay(600);
+
+    }
+    else if (depan < 3 && kanan < 3 && kiri < 3) {
+        mundur();
+        delay(600);
+        putar();
+        delay(900);
+        berhenti();
+        delay(200);
+      
+        // berhenti();
+        // delay(20000);
+       
+        return;
+    }
+    else if (depan < dis   && kanan < 30 && kiri > dis) {
+      // berhenti();
+      // delay(100);
+      belokKiri();
+      delay(300);
+    } else if (depan < 20 && kanan > dis && kiri < 20) {
+        belokKanan();
+        delay(850);
+        maju();
+        delay(1000);
+        belokKanan();
+        delay(700);
+        maju();
+        delay(1000);
+        return;
+    } else if (depan < dis && kanan > dis && kiri > dis) {
+        // mundurRodaKanan();
+        // delay(600);
+        mundur();
+        delay(300);
+        belokKanan();
+        delay(200);
+        // if(kanan < 200){
+          
+        // }
+        // else{
+          
+        // }
+    } else if (depan > 20 && kanan > dis && kiri < dis) {
+        belokKanan();
+    } else if (depan > 20 && kanan < dis && kiri > dis) {
+        belokKiri();
+    } 
+    else {
+        maju();
+    }
+}
+// Fungsi untuk mendapatkan jarak dari sensor ultrasonik
+long getDistance(int trigPin, int echoPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+    
+    long durasi = pulseIn(echoPin, HIGH);
+    long jarak = (durasi / 2) * 0.034; // Menghitung jarak
+    return jarak;
+}
+
+// Fungsi untuk memindahkan robot maju
+void maju() {
+    digitalWrite(optoPin1, HIGH); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, HIGH); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, HIGH);
+    
+    analogWrite(enA, 140);//motor kiri
+    analogWrite(enB, 140);//motor kanan
+}
+
+// Fungsi untuk memindahkan robot mundur
+void mundur() {
+    digitalWrite(optoPin1, HIGH); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, HIGH); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+    
+    analogWrite(enA, PWM);
+    analogWrite(enB, PWM);
+}
+void berhenti() {
+    digitalWrite(optoPin1, LOW); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, LOW); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, LOW);
+    
+    analogWrite(enA, 0);
+    analogWrite(enB, 0);
+}
+
+// Fungsi untuk memutar robot ke kiri
+void belokKiri() {
+    digitalWrite(optoPin1, HIGH); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, HIGH); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW); // Motor A berhenti
+    digitalWrite(in3, LOW); // Motor C berhenti
+    digitalWrite(in4, HIGH); // Motor B bergerak maju
+    
+    analogWrite(enA, 170);    // Hentikan motor A
+    analogWrite(enB, 170);
+}
+
+// Fungsi untuk memutar robot ke kanan
+void belokKanan() {
+    digitalWrite(optoPin1, HIGH); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, HIGH); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+    
+    analogWrite(enA, 170);
+    analogWrite(enB, 170);
+}
+void putar() {
+    digitalWrite(optoPin1, HIGH); // Mengaktifkan optocoupler untuk motor A
+    digitalWrite(optoPin2, HIGH); // Mengaktifkan optocoupler untuk motor B
+    
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);+
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+    
+    analogWrite(enA, 250);
+    analogWrite(enB, 250);
+}
